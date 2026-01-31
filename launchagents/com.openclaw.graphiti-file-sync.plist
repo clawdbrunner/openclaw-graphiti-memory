@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.openclaw.graphiti-file-sync</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <!-- UPDATE THIS PATH to match your setup -->
+        <string>/Users/YOUR_USERNAME/clawd/scripts/graphiti-watch-files.py</string>
+    </array>
+    <key>StartInterval</key>
+    <!-- Runs every 10 minutes (600 seconds) -->
+    <integer>600</integer>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <!-- UPDATE THIS PATH -->
+    <string>/Users/YOUR_USERNAME/.clawdbot/logs/graphiti-file-sync.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/YOUR_USERNAME/.clawdbot/logs/graphiti-file-sync.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>HOME</key>
+        <!-- UPDATE THIS -->
+        <string>/Users/YOUR_USERNAME</string>
+    </dict>
+</dict>
+</plist>
