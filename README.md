@@ -290,7 +290,7 @@ curl -s -X POST "http://localhost:8001/search" \
 
 ```bash
 # Log a decision or important fact
-~/clawd/scripts/graphiti-log.sh my-agent user "Chris" "Decided to use Postgres instead of SQLite for the main database"
+~/clawd/scripts/graphiti-log.sh my-agent user "Alice" "Decided to use Postgres instead of SQLite for the main database"
 ```
 
 ### Update Your AGENTS.md
