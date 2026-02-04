@@ -296,7 +296,7 @@ python3 ~/clawd/scripts/graphiti-import-files.py
 
 ## Credits
 
-- [QMD](https://github.com/dqbd/qmd) — Quick Memory Daemon
+- [QMD](https://github.com/tobi/qmd) — Quick Memory Daemon
 - [Graphiti](https://github.com/getzep/graphiti) — Temporal knowledge graph by Zep
 - [OpenClaw](https://openclaw.ai) — AI assistant platform
 - [Neo4j](https://neo4j.com) — Graph database
