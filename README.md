@@ -1,347 +1,198 @@
-# OpenClaw Hybrid Memory: Complete Setup Guide
+# OpenClaw Hybrid Memory: QMD + Graphiti
 
-A complete guide to setting up **hybrid memory** for [OpenClaw](https://openclaw.ai) — combining built-in vector memory search with [Graphiti](https://github.com/getzep/graphiti), Zep's open-source temporal knowledge graph.
+A complete hybrid memory system for [OpenClaw](https://openclaw.ai) combining **QMD** (fast local vector search) with **Graphiti** (temporal knowledge graph).
 
-## Why Hybrid Memory?
-
-OpenClaw's built-in memory search is great for document retrieval:
-- "What's in GOALS.md?"
-- "Find notes about the project architecture"
-- Semantic search across all your markdown files
-
-But it struggles with **temporal questions**:
-- "When did we discuss X?"
-- "What changed since last week?"
-- "What was true on Tuesday vs today?"
-
-**The solution:** Use both systems together.
+## Overview
 
 | System | Best For | Tool |
 |--------|----------|------|
-| OpenClaw Memory | Documents, logs, curated notes | `memory_search` |
-| Graphiti | Temporal facts, "when did X happen?", entity tracking | `graphiti-search.sh` |
+| **QMD** | Documents, specs, full content | `qmd search` |
+| **Graphiti** | Temporal facts, "when did X happen?" | `graphiti-search.sh` |
+| **Hybrid** | Unified search across both | `memory-hybrid-search.sh` |
 
 ---
 
-## Part 1: OpenClaw Memory Search (Built-in)
+## Part 1: QMD (Vector Memory)
 
-OpenClaw has built-in vector memory search that indexes your markdown files. By default it's enabled but needs an embedding provider configured.
+QMD is a fast, local vector search engine that indexes your markdown files and session transcripts.
 
-### Quick Check
+### Install QMD
 
 ```bash
-openclaw status
+# Install via Homebrew
+brew install qmd
+
+# Or via npm
+npm install -g qmd
 ```
 
-Look for memory search status. If it says "no embedding provider configured," follow the steps below.
+### Configure OpenClaw
 
-### Option A: Gemini Embeddings (Recommended — Free Tier Available)
-
-1. **Get a Gemini API key** from [Google AI Studio](https://aistudio.google.com/apikey)
-
-2. **Add to your OpenClaw config** (`~/.openclaw/openclaw.json`):
+Add to your `~/.openclaw/openclaw.json`:
 
 ```json
 {
-  "agents": {
-    "defaults": {
-      "memorySearch": {
+  "memory": {
+    "backend": "qmd",
+    "qmd": {
+      "command": "/Users/YOURNAME/.bun/bin/qmd",
+      "includeDefaultMemory": true,
+      "sessions": {
         "enabled": true,
-        "provider": "gemini",
-        "model": "text-embedding-004",
-        "remote": {
-          "apiKey": "YOUR_GEMINI_API_KEY"
-        }
+        "retentionDays": 30
+      },
+      "update": {
+        "interval": "5m",
+        "debounceMs": 15000
+      },
+      "limits": {
+        "maxResults": 10,
+        "timeoutMs": 30000
       }
     }
   }
 }
 ```
 
-Or via environment variable:
-```bash
-export GEMINI_API_KEY="your-key-here"
-```
-
-3. **Restart the gateway:**
-```bash
-openclaw gateway restart
-```
-
-### Option B: OpenAI Embeddings
-
-```json
-{
-  "agents": {
-    "defaults": {
-      "memorySearch": {
-        "enabled": true,
-        "provider": "openai",
-        "model": "text-embedding-3-small"
-      }
-    }
-  }
-}
-```
-
-OpenClaw will use your existing OpenAI API key if configured.
-
-### Option C: Local Embeddings (No API Key)
-
-```json
-{
-  "agents": {
-    "defaults": {
-      "memorySearch": {
-        "enabled": true,
-        "provider": "local"
-      }
-    }
-  }
-}
-```
-
-Note: Local mode requires `pnpm approve-builds` for node-llama-cpp. The default model (~0.6GB) auto-downloads on first use.
-
-### Verify Memory Search Works
+### Verify QMD Works
 
 ```bash
-openclaw memory status
-```
+# Check status
+qmd status
 
-You should see your memory files indexed. Test it:
-
-```bash
-openclaw memory search "your query here"
-```
-
-### Memory File Structure
-
-OpenClaw indexes these paths by default:
-- `MEMORY.md` — Curated long-term memory
-- `memory/**/*.md` — Daily logs and notes
-
-Recommended structure:
-```
-~/.openclaw/workspace/
-├── MEMORY.md              # Curated long-term memory
-└── memory/
-    ├── logs/
-    │   ├── 2026-01-30.md  # Daily logs
-    │   └── 2026-01-31.md
-    └── projects/
-        └── goals.md       # Project docs
-```
-
-### Add Extra Paths (Optional)
-
-To index markdown files outside the default locations:
-
-```json
-{
-  "agents": {
-    "defaults": {
-      "memorySearch": {
-        "extraPaths": ["../team-docs", "/srv/shared-notes"]
-      }
-    }
-  }
-}
+# Search
+qmd search "your query here" -n 5
 ```
 
 ---
 
 ## Part 2: Graphiti (Temporal Knowledge Graph)
 
-Now that basic memory search works, let's add Graphiti for temporal reasoning.
-
-### What Graphiti Adds
-
-- **Bi-temporal knowledge graph** — tracks both when events happened and when you learned about them
-- **Automatic entity extraction** — identifies people, projects, decisions
-- **Knowledge versioning** — facts can be superseded over time
-- **Sub-second retrieval** — fast queries even with large graphs
-
-### Install Docker (via Colima for macOS)
-
-```bash
-# Install Colima + Docker CLI (lightweight, no Docker Desktop needed)
-brew install colima docker docker-compose
-
-# Configure docker-compose plugin
-mkdir -p ~/.docker
-echo '{"cliPluginsExtraDirs": ["/opt/homebrew/lib/docker/cli-plugins"]}' > ~/.docker/config.json
-
-# Start Colima (4 CPU, 8GB RAM recommended)
-colima start --cpu 4 --memory 8
-
-# Enable auto-start on boot
-brew services start colima
-```
+Graphiti adds temporal reasoning — tracking when events happened and how facts change over time.
 
 ### Deploy Graphiti Stack
 
 ```bash
-# Create directory
+# Prerequisites: Docker (via Colima for macOS)
+brew install colima docker docker-compose
+mkdir -p ~/.docker
+echo '{"cliPluginsExtraDirs": ["/opt/homebrew/lib/docker/cli-plugins"]}' > ~/.docker/config.json
+colima start --cpu 4 --memory 8
+
+# Deploy Graphiti
 mkdir -p ~/services/graphiti
 cd ~/services/graphiti
-
-# Download docker-compose.yml
 curl -O https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main/docker-compose.yml
-
-# Set your OpenAI API key (required for Graphiti's entity extraction)
 export OPENAI_API_KEY="your-key-here"
-
-# Start the stack
 docker compose up -d
-```
 
-Verify it's running:
-```bash
+# Verify
 curl http://localhost:8001/healthcheck
-# Should return: {"status": "ok"}
 ```
 
 ### Install Scripts
 
 ```bash
-# Download scripts to your workspace
 mkdir -p ~/clawd/scripts
 cd ~/clawd/scripts
 
+# Core Graphiti scripts
 curl -O https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main/scripts/graphiti-sync-sessions.py
 curl -O https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main/scripts/graphiti-watch-files.py
 curl -O https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main/scripts/graphiti-import-files.py
 curl -O https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main/scripts/graphiti-search.sh
 curl -O https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main/scripts/graphiti-log.sh
 
-chmod +x graphiti-*.sh graphiti-*.py
+# NEW: Hybrid search script
+curl -O https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main/scripts/memory-hybrid-search.sh
+
+chmod +x graphiti-*.sh graphiti-*.py memory-hybrid-search.sh
 ```
-
-### Install the OpenClaw Skill (Optional)
-
-```bash
-clawdhub install graphiti
-```
-
-This adds Graphiti-specific instructions to your agent's skill set.
 
 ### Set Up Auto-Sync (macOS)
 
-These LaunchAgents keep Graphiti in sync automatically:
-
 ```bash
-# Download LaunchAgent templates
+# Download LaunchAgents
 curl -o ~/Library/LaunchAgents/com.openclaw.graphiti-sync.plist \
   https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main/launchagents/com.openclaw.graphiti-sync.plist
 
 curl -o ~/Library/LaunchAgents/com.openclaw.graphiti-file-sync.plist \
   https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main/launchagents/com.openclaw.graphiti-file-sync.plist
-```
 
-**Important:** Edit the plists to match your username and paths, then load them:
-
-```bash
+# Edit paths to match your username, then load:
 launchctl load ~/Library/LaunchAgents/com.openclaw.graphiti-sync.plist
 launchctl load ~/Library/LaunchAgents/com.openclaw.graphiti-file-sync.plist
 ```
 
 | Daemon | Interval | What it syncs |
 |--------|----------|---------------|
-| `graphiti-sync` | 30 min | Session conversations → Graphiti |
-| `graphiti-file-sync` | 10 min | Memory files → Graphiti |
+| `graphiti-sync` | 30 min | Session conversations |
+| `graphiti-file-sync` | 10 min | Memory file changes |
 
-### Import Existing Memory Files
+---
 
-One-time import of your existing memory files:
+## Part 3: Unified Hybrid Search
+
+The `memory-hybrid-search.sh` script queries **both** systems and presents unified results.
+
+### Usage
 
 ```bash
-python3 ~/clawd/scripts/graphiti-import-files.py
+# Basic search
+~/clawd/scripts/memory-hybrid-search.sh "Spectra launch plan"
+
+# Specify group ID
+~/clawd/scripts/memory-hybrid-search.sh "database decision" my-agent
+
+# JSON output for scripts
+~/clawd/scripts/memory-hybrid-search.sh "budget" --json
+```
+
+### Example Output
+
+```
+🔍 Hybrid Memory Search: 'Spectra launch plan'
+========================================
+
+🧠 Graphiti (Temporal Facts):
+  [2026-02-01] Decided to target March 15th launch date
+  [2026-02-02] Changed from Postgres to SQLite for MVP
+
+📄 QMD (Document Search):
+  [0.89] memory/projects/spectra-launch.md
+  [0.76] memory/logs/2026-02-01.md
+
+========================================
 ```
 
 ---
 
-## Part 3: Using Hybrid Memory
-
-Now you have both systems running. Here's when to use each:
-
-### Document Retrieval → memory_search
-
-The agent uses this automatically via the `memory_search` tool:
-- "What's in our goals document?"
-- "Find notes about the architecture"
-- "What did I write about X?"
-
-### Temporal Questions → Graphiti
-
-Use the search script for "when" questions:
-
-```bash
-# Quick search
-~/clawd/scripts/graphiti-search.sh "When did we set up the Slack integration?" my-agent 10
-
-# Via curl
-curl -s -X POST "http://localhost:8001/search" \
-  -H 'Content-Type: application/json' \
-  -d '{"group_id": "my-agent", "query": "When did we set up Slack?", "max_facts": 10}'
-```
-
-### Log Important Facts Manually
-
-```bash
-# Log a decision or important fact
-~/clawd/scripts/graphiti-log.sh my-agent user "Alice" "Decided to use Postgres instead of SQLite for the main database"
-```
-
-### Update Your AGENTS.md
-
-Add instructions for your agent to use both systems:
-
-```markdown
-## Memory Recall (Hybrid System)
-
-We use **two memory systems** — use both!
-
-**For temporal questions** ("when did X happen?", "what did we discuss last Tuesday?"):
-```bash
-~/clawd/scripts/graphiti-search.sh "your query" my-agent 10
-```
-
-**For document retrieval** ("what's in GOALS.md?", "find project docs about X"):
-```
-memory_search query="your query"
-```
-
-**When answering questions about past context:**
-1. Check Graphiti for temporal facts first
-2. Use `memory_search` for document content
-3. If low confidence after both, say you checked
-```
-
----
-
-## Architecture Overview
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                         OpenClaw                            │
+│                      OpenClaw Agent                         │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  ┌─────────────────┐         ┌─────────────────┐           │
-│  │  Vector Memory  │         │    Graphiti     │           │
-│  │  (Built-in)     │         │  (Knowledge     │           │
-│  │                 │         │   Graph)        │           │
-│  │  • MEMORY.md    │         │                 │           │
-│  │  • memory/*.md  │◄───────►│  • Temporal     │           │
-│  │  • Semantic     │  sync   │    facts        │           │
-│  │    search       │         │  • Entities     │           │
-│  │                 │         │  • Relations    │           │
-│  │  memory_search  │         │  graphiti-      │           │
-│  │  memory_get     │         │  search.sh      │           │
-│  └─────────────────┘         └─────────────────┘           │
-│           │                           │                     │
-│           ▼                           ▼                     │
-│  "What's in GOALS.md?"    "When did we discuss X?"         │
+│         ┌─────────────────────────────────────┐            │
+│         │   memory-hybrid-search.sh          │            │
+│         │   (Unified Interface)              │            │
+│         └──────────────┬──────────────────────┘            │
+│                        │                                    │
+│           ┌────────────┴────────────┐                      │
+│           ▼                         ▼                      │
+│  ┌─────────────────┐    ┌─────────────────────┐           │
+│  │      QMD        │    │      Graphiti       │           │
+│  │  (Vector Store) │    │  (Knowledge Graph)  │           │
+│  ├─────────────────┤    ├─────────────────────┤           │
+│  │ • MEMORY.md     │    │ • Temporal facts    │           │
+│  │ • memory/*.md   │◄──►│ • Entity relations  │           │
+│  │ • Sessions      │sync│ • Bi-temporal data  │           │
+│  └─────────────────┘    └─────────────────────┘           │
+│        Auto-sync              Auto-sync                    │
+│        (5 min)                (10/30 min)                  │
+│                                                             │
+│  "What's in GOALS.md?"    "When did we decide that?"       │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -352,17 +203,18 @@ memory_search query="your query"
 
 ```
 ~/clawd/
-├── MEMORY.md               # Curated long-term memory
+├── MEMORY.md                    # Curated long-term memory
 ├── memory/
-│   ├── logs/               # Daily logs (YYYY-MM-DD.md)
-│   ├── projects/           # Project documentation
-│   └── system/             # System files
+│   ├── logs/                    # Daily logs (YYYY-MM-DD.md)
+│   ├── projects/                # Project documentation
+│   └── system/                  # System configuration
 ├── scripts/
-│   ├── graphiti-sync-sessions.py   # Session auto-sync
-│   ├── graphiti-watch-files.py     # File change sync
-│   ├── graphiti-import-files.py    # One-time import
-│   ├── graphiti-search.sh          # Quick temporal search
-│   └── graphiti-log.sh             # Manual fact logging
+│   ├── memory-hybrid-search.sh  # ⭐ Unified search (NEW)
+│   ├── graphiti-search.sh       # Temporal search
+│   ├── graphiti-log.sh          # Manual fact logging
+│   ├── graphiti-sync-sessions.py
+│   ├── graphiti-watch-files.py
+│   └── graphiti-import-files.py
 └── services/
     └── graphiti/
         └── docker-compose.yml
@@ -374,82 +226,69 @@ memory_search query="your query"
 
 ---
 
-## Customization
+## Skill Integration
 
-### Group IDs
+Add this to your agent's `AGENTS.md` or as a standalone skill:
 
-Use different `group_id` values to separate contexts:
-- `main-agent` — Primary conversational agent
-- `email-agent` — Email processing agent
-- `user-personal` — User's personal facts
+```markdown
+## Memory Recall (Hybrid System)
 
-### Adjusting Sync Intervals
+We use **two memory systems** integrated into a single view:
 
-Edit the LaunchAgent plists and change `StartInterval`:
-- 600 = 10 minutes
-- 1800 = 30 minutes
-- 3600 = 1 hour
+### Primary Tool (95% of queries)
+```bash
+~/clawd/scripts/memory-hybrid-search.sh "your query"
+```
 
-### Neo4j Browser
+### Graphiti Only (Temporal/Facts)
+```bash
+~/clawd/scripts/graphiti-search.sh "when did X happen?" my-agent 10
+```
 
-Access the graph directly at http://localhost:7474
-- Username: `neo4j`
-- Password: `graphiti_memory_2026`
+### QMD Only (Deep Document Search)
+```bash
+qmd search "query" -n 10
+```
+
+### Logging Facts
+```bash
+~/clawd/scripts/graphiti-log.sh my-agent user "Name" "Important fact"
+```
+```
 
 ---
 
 ## Troubleshooting
 
-### Memory search not working
-
+### QMD issues
 ```bash
-# Check status
-openclaw memory status
-
-# Verify embedding provider
-openclaw status --all | grep -A5 memory
+qmd status                    # Check if running
+qmd update                    # Force re-index
 ```
 
-Common issues:
-- No API key configured for embeddings
-- Workspace path doesn't exist
-- No markdown files to index
-
-### Graphiti not starting
-
+### Graphiti issues
 ```bash
-# Check container logs
-docker logs graphiti
-docker logs neo4j
-
-# Verify health
+docker logs graphiti          # Check API logs
+docker logs neo4j             # Check database logs
 curl http://localhost:8001/healthcheck
 ```
 
-### Sync daemons not running
-
+### Sync daemons
 ```bash
-# Check daemon status
 launchctl list | grep graphiti
-
-# Check logs
 tail -f ~/.openclaw/logs/graphiti-sync.log
 ```
 
-### Reset Graphiti (start fresh)
-
+### Reset everything
 ```bash
-# Stop and remove containers + volumes
-cd ~/services/graphiti && docker compose down -v
+# QMD
+qmd reset
 
-# Clear sync state
+# Graphiti
+cd ~/services/graphiti && docker compose down -v
 rm ~/.openclaw/graphiti-sync-state.json
 rm ~/.openclaw/graphiti-file-hashes.json
-
-# Restart
 docker compose up -d
-
-# Re-import files
 python3 ~/clawd/scripts/graphiti-import-files.py
 ```
 
@@ -457,8 +296,9 @@ python3 ~/clawd/scripts/graphiti-import-files.py
 
 ## Credits
 
-- [Graphiti](https://github.com/getzep/graphiti) by Zep — The temporal knowledge graph engine
-- [OpenClaw](https://openclaw.ai) — The AI assistant platform
+- [QMD](https://github.com/dqbd/qmd) — Quick Memory Daemon
+- [Graphiti](https://github.com/getzep/graphiti) — Temporal knowledge graph by Zep
+- [OpenClaw](https://openclaw.ai) — AI assistant platform
 - [Neo4j](https://neo4j.com) — Graph database
 
 ## License
