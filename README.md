@@ -258,6 +258,28 @@ qmd search "query" -n 10
 
 ---
 
+## When to Search Memory
+
+Add this guidance to your agent's operating rules file (e.g., `AGENTS.md` in your workspace):
+
+```markdown
+### Memory Search
+
+**Default to searching memory.** The search is cheap. Missing context is expensive.
+
+| | Examples |
+|--|----------|
+| **Always search** | Your context — your work, projects, history, preferences |
+| **Default search** | Most questions — even general knowledge might have relevant past discussions |
+| **Skip** | Only trivial/conversational ("thanks", "good morning") |
+
+When in doubt, search first.
+```
+
+This guidance should go in whatever file your OpenClaw agent reads at session start for behavioral rules. The goal is to make memory search a **default habit**, not a special case.
+
+---
+
 ## Troubleshooting
 
 ### QMD issues
