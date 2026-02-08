@@ -48,4 +48,4 @@ Full protocol: `~/clawd/agents/_shared/agent-comms.md`
 
 ## Escalation Path
 
-Agent → Department Lead → Clawd → Chris
+Agent → Department Lead → Orchestrator → User

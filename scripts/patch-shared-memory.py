@@ -43,7 +43,7 @@ You have access to a **shared knowledge graph** that all agents contribute to. U
 
 **What to log:** {hint}
 **What NOT to log:** Routine status, temporary task state, raw data dumps.
-**Rules:** Never write to another agent's group or to user-chris/system-shared. Report updates to Clawd.
+**Rules:** Never write to another agent's group or to user-main/system-shared. Report updates to the orchestrator.
 Full docs: ~/clawd/agents/_shared/graphiti-memory.md
 
 ---

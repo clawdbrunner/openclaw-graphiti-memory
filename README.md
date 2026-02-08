@@ -17,7 +17,7 @@ A complete three-layer memory system for [OpenClaw](https://openclaw.ai) multi-a
 │                                                      │
 │  Layer 2: Shared Files (_shared/)                    │
 │  ┌──────────────────────────────────┐               │
-│  │ chris-profile.md                 │               │
+│  │ user-profile.md                  │               │
 │  │ agent-roster.md                  │               │
 │  │ infrastructure.md                │               │
 │  │ graphiti-memory.md               │               │
@@ -29,7 +29,7 @@ A complete three-layer memory system for [OpenClaw](https://openclaw.ai) multi-a
 │  ┌──────────────────────────────────┐               │
 │  │ clawdbot-clawd  (write own)     │               │
 │  │ clawdbot-piper  (write own)     │               │
-│  │ user-chris      (orchestrator)  │               │
+│  │ user-main      (orchestrator)  │               │
 │  │ system-shared   (orchestrator)  │               │
 │  └──────────────────────────────────┘               │
 │  Cross-group search for temporal facts               │
@@ -46,7 +46,7 @@ A complete three-layer memory system for [OpenClaw](https://openclaw.ai) multi-a
 
 ### When to use which
 
-- **"What's Chris's email?"** → Shared files (`chris-profile.md`) or Graphiti
+- **"What's the user's email?"** → Shared files (`user-profile.md`) or Graphiti
 - **"What did I log yesterday?"** → Private files (`memory_search`)
 - **"What did Piper find about that invoice?"** → Graphiti (cross-group search)
 - **"Who handles security?"** → Shared files (`agent-roster.md`)
@@ -65,7 +65,7 @@ A complete three-layer memory system for [OpenClaw](https://openclaw.ai) multi-a
 ### 1. Install Graphiti Stack
 
 ```bash
-git clone https://github.com/clawdbrunner/openclaw-graphiti-memory.git
+git clone https://github.com/your-username/openclaw-graphiti-memory.git
 cd openclaw-graphiti-memory
 
 # Copy docker-compose to your services directory
@@ -133,7 +133,7 @@ python3 scripts/patch-shared-memory.py
 
 ```bash
 # Seed user profile
-scripts/graphiti-log.sh user-chris system "System" "Chris lives in Puerto Rico, AST timezone."
+scripts/graphiti-log.sh user-main system "System" "User lives in Example City, EST timezone."
 
 # Seed agent roster
 scripts/graphiti-log.sh system-shared system "System" "Agent team: Clawd (orchestrator), Piper (email), Paige (finance)..."
@@ -168,14 +168,14 @@ scripts/graphiti-log.sh system-shared system "System" "Agent team: Clawd (orches
 | Group | Owner | Purpose |
 |-------|-------|---------|
 | `clawdbot-<agent_id>` | Each agent | Agent's own discoveries and decisions |
-| `user-chris` | Orchestrator | User profile, preferences, contacts |
+| `user-main` | Orchestrator | User profile, preferences, contacts |
 | `system-shared` | Orchestrator | Agent roster, infrastructure, active projects |
 
 ### Rules
 
 1. Agents write to their **own group only**
 2. Agents read **cross-group** (omit `group_id` for global search)
-3. Only the orchestrator writes to `user-chris` and `system-shared`
+3. Only the orchestrator writes to `user-main` and `system-shared`
 4. Shared files in `_shared/` are **read-only** for agents — report updates to orchestrator
 
 ---

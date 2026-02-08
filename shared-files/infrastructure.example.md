@@ -2,10 +2,10 @@
 
 ## Hardware
 
-- **Mac Mini** (Apple Silicon) — Puerto Rico, Chris's home
+- **Mac Mini** (Apple Silicon) — user's home
   - Runs all agents via OpenClaw
-  - Local IP: 192.168.50.178
-  - Tailscale IP: 100.102.70.120
+  - Local IP: 192.168.1.100
+  - Tailscale IP: 100.x.x.x
 
 ## Services
 
@@ -13,7 +13,7 @@
 |---------|-----|---------|
 | **Graphiti API** | http://localhost:8001 | Shared knowledge graph |
 | **Neo4j Browser** | http://localhost:7474 | Graph database UI |
-| **Agent Dashboard** | http://192.168.50.178:3080 | Mission Control |
+| **Agent Dashboard** | http://192.168.1.100:3080 | Mission Control |
 | **OpenClaw Gateway** | http://localhost:3456 | Agent runtime |
 
 ## Media Stack (ElfHosted)
@@ -27,9 +27,9 @@
 
 ## Communication Channels
 
-- **Signal:** Primary Chris ↔ Clawd channel
-- **Slack:** Inter-agent coordination + Chris visibility
-- **Twitter/X:** @chrisbrunner (Chris), @clawdbrunner (Clawd)
+- **Signal:** Primary User ↔ Agent channel
+- **Slack:** Inter-agent coordination + User visibility
+- **Twitter/X:** @exampleuser (User), @exampleagent (Agent)
 
 ## Docker (via Colima)
 

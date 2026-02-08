@@ -19,7 +19,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # Configuration
-REPO_URL="https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main"
+REPO_URL="https://raw.githubusercontent.com/your-username/openclaw-graphiti-memory/main"
 CLAWD_DIR="${CLAWD_DIR:-$HOME/clawd}"
 SERVICES_DIR="$HOME/services"
 SCRIPT_DIR="$CLAWD_DIR/scripts"

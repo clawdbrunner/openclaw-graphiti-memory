@@ -13,7 +13,7 @@ Your `memory/` directory is private to you. Use `memory_search` for semantic sea
 
 ### Layer 2: Shared Files (`shared/`)
 The `shared/` directory in your workspace contains reference docs maintained by Clawd (orchestrator):
-- `shared/chris-profile.md` — Chris's preferences, contacts, schedule
+- `shared/user-profile.md` — User's preferences, contacts, schedule
 - `shared/agent-roster.md` — Who does what, how to reach other agents
 - `shared/infrastructure.md` — System architecture, URLs, services
 - `shared/graphiti-memory.md` — Full shared memory docs
@@ -39,6 +39,6 @@ All agents contribute to a shared temporal knowledge graph.
 
 **Rules:**
 - Never write to another agent's Graphiti group
-- Never write to `user-chris` or `system-shared` groups
+- Never write to `user-main` or `system-shared` groups
 - Never modify files in `shared/` — report updates to Clawd
 - Search shared memory before asking questions that might already be answered

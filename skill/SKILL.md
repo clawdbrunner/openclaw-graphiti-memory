@@ -50,8 +50,8 @@ qmd search "query" -n 10
 
 ## Recall Pattern
 
-1. **User asks question** ("What was the plan for Spectra?")
-2. **Run Hybrid Search** (`~/clawd/scripts/memory-hybrid-search.sh "plan for Spectra"`)
+1. **User asks question** ("What was the plan for the project?")
+2. **Run Hybrid Search** (`~/clawd/scripts/memory-hybrid-search.sh "plan for the project"`)
 3. **Synthesize Answer** from both the temporal facts and document snippets found.
 4. **If needed:** Use `read` to get the full content of a file found in the QMD results.
 

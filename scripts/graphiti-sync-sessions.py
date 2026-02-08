@@ -152,7 +152,7 @@ def sync_sessions():
                     
                     # Determine role_type and speaker
                     role_type = 'user' if role == 'user' else 'assistant'
-                    speaker = 'Chris' if role == 'user' else 'Clawd'
+                    speaker = 'User' if role == 'user' else 'Agent'
                     
                     # Send to Graphiti
                     if send_to_graphiti('clawdbot-main', role_type, speaker, content, timestamp):

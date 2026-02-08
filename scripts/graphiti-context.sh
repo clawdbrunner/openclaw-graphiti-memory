@@ -20,9 +20,9 @@ curl -s -X POST "${GRAPHITI_URL}/search" \
 
 echo ""
 
-# 2. User context (Chris's profile/preferences)
+# 2. User context (user's profile/preferences)
 echo "--- User Context ---"
-PAYLOAD=$(jq -n --arg q "$TASK" --arg g "user-chris" '{query: $q, group_id: $g, max_facts: 5}')
+PAYLOAD=$(jq -n --arg q "$TASK" --arg g "user-main" '{query: $q, group_id: $g, max_facts: 5}')
 curl -s -X POST "${GRAPHITI_URL}/search" \
   -H 'Content-Type: application/json' \
   -d "$PAYLOAD" | jq -r '.facts[]? | "• \(.fact)"' 2>/dev/null
