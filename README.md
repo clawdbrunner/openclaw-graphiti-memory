@@ -1,332 +1,208 @@
-# OpenClaw Hybrid Memory: QMD + Graphiti
+# OpenClaw Hybrid Memory: QMD + Graphiti + Shared Files
 
-A complete hybrid memory system for [OpenClaw](https://openclaw.ai) combining **QMD** (fast local vector search) with **Graphiti** (temporal knowledge graph).
+A complete three-layer memory system for [OpenClaw](https://openclaw.ai) multi-agent setups.
 
-## Overview
+## Architecture
 
-| System | Best For | Tool |
-|--------|----------|------|
-| **QMD** | Documents, specs, full content | `qmd search` |
-| **Graphiti** | Temporal facts, "when did X happen?" | `graphiti-search.sh` |
-| **Hybrid** | Unified search across both | `memory-hybrid-search.sh` |
+```
+┌─────────────────────────────────────────────────────┐
+│                   Agent Memory                       │
+│                                                      │
+│  Layer 1: Private Files (QMD)                        │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐            │
+│  │ piper/   │ │ paige/   │ │ dean/    │  ...       │
+│  │ memory/  │ │ memory/  │ │ memory/  │            │
+│  └──────────┘ └──────────┘ └──────────┘            │
+│  Per-agent vector search via memory_search           │
+│                                                      │
+│  Layer 2: Shared Files (_shared/)                    │
+│  ┌──────────────────────────────────┐               │
+│  │ chris-profile.md                 │               │
+│  │ agent-roster.md                  │               │
+│  │ infrastructure.md                │               │
+│  │ graphiti-memory.md               │               │
+│  └──────────────────────────────────┘               │
+│  Symlinked into each agent workspace as shared/      │
+│  Indexed by QMD alongside private files              │
+│                                                      │
+│  Layer 3: Shared Knowledge Graph (Graphiti)          │
+│  ┌──────────────────────────────────┐               │
+│  │ clawdbot-clawd  (write own)     │               │
+│  │ clawdbot-piper  (write own)     │               │
+│  │ user-chris      (orchestrator)  │               │
+│  │ system-shared   (orchestrator)  │               │
+│  └──────────────────────────────────┘               │
+│  Cross-group search for temporal facts               │
+└─────────────────────────────────────────────────────┘
+```
+
+## Three Layers
+
+| Layer | What | Best For | Mutability |
+|-------|------|----------|------------|
+| **Private Files** | Agent's own `memory/` dir | Private notes, task logs, local state | Agent writes freely |
+| **Shared Files** | `_shared/` dir (symlinked) | Stable reference docs (profiles, roster) | Orchestrator maintains |
+| **Shared Graph** | Graphiti knowledge graph | Temporal facts, cross-agent knowledge | Agents write to own group |
+
+### When to use which
+
+- **"What's Chris's email?"** → Shared files (`chris-profile.md`) or Graphiti
+- **"What did I log yesterday?"** → Private files (`memory_search`)
+- **"What did Piper find about that invoice?"** → Graphiti (cross-group search)
+- **"Who handles security?"** → Shared files (`agent-roster.md`)
+- **"When did we change the deployment config?"** → Graphiti (temporal)
 
 ---
 
-## Part 1: QMD (Vector Memory)
+## Setup
 
-QMD is a fast, local vector search engine that indexes your markdown files and session transcripts.
+### Prerequisites
 
-### Install QMD
+- [OpenClaw](https://openclaw.ai) installed and configured
+- Docker (for Graphiti + Neo4j)
+- An OpenAI API key (for Graphiti embeddings)
+
+### 1. Install Graphiti Stack
 
 ```bash
-# Install via Homebrew
-brew install qmd
+git clone https://github.com/clawdbrunner/openclaw-graphiti-memory.git
+cd openclaw-graphiti-memory
 
-# Or via npm
-npm install -g qmd
+# Copy docker-compose to your services directory
+cp docker-compose.yml ~/clawd/services/graphiti/
+
+# Set your OpenAI key
+export OPENAI_API_KEY="sk-..."
+
+# Start the stack
+cd ~/clawd/services/graphiti
+docker compose up -d
 ```
 
-### Configure OpenClaw
+### 2. Configure QMD in OpenClaw
 
-Add to your `~/.openclaw/openclaw.json`:
+Add to `~/.openclaw/openclaw.json` under `agents.defaults`:
 
 ```json
 {
-  "memory": {
-    "backend": "qmd",
-    "qmd": {
-      "command": "/Users/YOURNAME/.bun/bin/qmd",
-      "includeDefaultMemory": true,
-      "sessions": {
-        "enabled": true,
-        "retentionDays": 30
-      },
-      "update": {
-        "interval": "5m",
-        "debounceMs": 15000
-      },
-      "limits": {
-        "maxResults": 10,
-        "timeoutMs": 30000
-      }
+  "memorySearch": {
+    "enabled": true,
+    "sources": ["memory", "sessions"],
+    "provider": "gemini",
+    "model": "gemini-embedding-001",
+    "sync": {
+      "onSessionStart": true,
+      "watch": true
     }
   }
 }
 ```
 
-### Verify QMD Works
+### 3. Set Up Shared Directory
 
 ```bash
-# Check status
-qmd status
+# Create the shared directory
+mkdir -p ~/clawd/agents/_shared/bin
 
-# Search
-qmd search "your query here" -n 5
+# Copy shared scripts
+cp scripts/graphiti-search.sh ~/clawd/agents/_shared/bin/
+cp scripts/graphiti-log.sh ~/clawd/agents/_shared/bin/
+cp scripts/graphiti-context.sh ~/clawd/agents/_shared/bin/
+chmod +x ~/clawd/agents/_shared/bin/*.sh
+
+# Copy shared reference files
+cp shared-files/*.md ~/clawd/agents/_shared/
+
+# Symlink into each agent's workspace
+for agent_dir in ~/clawd/agents/*/; do
+  agent=$(basename "$agent_dir")
+  [[ "$agent" == "_shared" || "$agent" == "_template" ]] && continue
+  ln -sf ~/clawd/agents/_shared "$agent_dir/shared"
+done
+```
+
+### 4. Add Memory Instructions to Agent AGENTS.md
+
+Add the shared memory section to each agent's AGENTS.md. See `templates/shared-memory-snippet.md` for a copy-paste template, or use the patch script:
+
+```bash
+python3 scripts/patch-shared-memory.py
+```
+
+### 5. Seed Shared Context
+
+```bash
+# Seed user profile
+scripts/graphiti-log.sh user-chris system "System" "Chris lives in Puerto Rico, AST timezone."
+
+# Seed agent roster
+scripts/graphiti-log.sh system-shared system "System" "Agent team: Clawd (orchestrator), Piper (email), Paige (finance)..."
 ```
 
 ---
 
-## Part 2: Graphiti (Temporal Knowledge Graph)
+## Scripts
 
-Graphiti adds temporal reasoning — tracking when events happened and how facts change over time.
+### For Agents (`_shared/bin/`)
 
-### Deploy Graphiti Stack
+| Script | Purpose |
+|--------|---------|
+| `graphiti-search.sh "query" [group_id] [max]` | Search knowledge graph |
+| `graphiti-log.sh <agent_id> <role> <name> "content"` | Log facts to own group |
+| `graphiti-context.sh "task" [agent_id]` | Get full context for a task |
 
-```bash
-# Prerequisites: Docker (via Colima for macOS)
-brew install colima docker docker-compose
-mkdir -p ~/.docker
-echo '{"cliPluginsExtraDirs": ["/opt/homebrew/lib/docker/cli-plugins"]}' > ~/.docker/config.json
-colima start --cpu 4 --memory 8
+### For Setup (`scripts/`)
 
-# Deploy Graphiti
-mkdir -p ~/services/graphiti
-cd ~/services/graphiti
-curl -O https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main/docker-compose.yml
-export OPENAI_API_KEY="your-key-here"
-docker compose up -d
-
-# Verify
-curl http://localhost:8001/healthcheck
-```
-
-### Install Scripts
-
-```bash
-mkdir -p ~/clawd/scripts
-cd ~/clawd/scripts
-
-# Core Graphiti scripts
-curl -O https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main/scripts/graphiti-sync-sessions.py
-curl -O https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main/scripts/graphiti-watch-files.py
-curl -O https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main/scripts/graphiti-import-files.py
-curl -O https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main/scripts/graphiti-search.sh
-curl -O https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main/scripts/graphiti-log.sh
-
-# NEW: Hybrid search script
-curl -O https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main/scripts/memory-hybrid-search.sh
-
-chmod +x graphiti-*.sh graphiti-*.py memory-hybrid-search.sh
-```
-
-### Set Up Auto-Sync (macOS)
-
-```bash
-# Download LaunchAgents
-curl -o ~/Library/LaunchAgents/com.openclaw.graphiti-sync.plist \
-  https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main/launchagents/com.openclaw.graphiti-sync.plist
-
-curl -o ~/Library/LaunchAgents/com.openclaw.graphiti-file-sync.plist \
-  https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main/launchagents/com.openclaw.graphiti-file-sync.plist
-
-# Edit paths to match your username, then load:
-launchctl load ~/Library/LaunchAgents/com.openclaw.graphiti-sync.plist
-launchctl load ~/Library/LaunchAgents/com.openclaw.graphiti-file-sync.plist
-```
-
-| Daemon | Interval | What it syncs |
-|--------|----------|---------------|
-| `graphiti-sync` | 30 min | Session conversations |
-| `graphiti-file-sync` | 10 min | Memory file changes |
+| Script | Purpose |
+|--------|---------|
+| `memory-hybrid-search.sh "query"` | Search QMD + Graphiti together |
+| `graphiti-import-files.py` | Bulk import files into Graphiti |
+| `graphiti-sync-sessions.py` | Sync session transcripts to Graphiti |
+| `graphiti-watch-files.py` | Watch files and auto-sync to Graphiti |
+| `patch-shared-memory.py` | Patch all agent AGENTS.md files |
 
 ---
 
-## Part 3: Unified Hybrid Search
+## Graphiti Groups
 
-The `memory-hybrid-search.sh` script queries **both** systems and presents unified results.
+| Group | Owner | Purpose |
+|-------|-------|---------|
+| `clawdbot-<agent_id>` | Each agent | Agent's own discoveries and decisions |
+| `user-chris` | Orchestrator | User profile, preferences, contacts |
+| `system-shared` | Orchestrator | Agent roster, infrastructure, active projects |
 
-### Usage
+### Rules
 
-```bash
-# Basic search
-~/clawd/scripts/memory-hybrid-search.sh "Spectra launch plan"
-
-# Specify group ID
-~/clawd/scripts/memory-hybrid-search.sh "database decision" my-agent
-
-# JSON output for scripts
-~/clawd/scripts/memory-hybrid-search.sh "budget" --json
-```
-
-### Example Output
-
-```
-🔍 Hybrid Memory Search: 'Spectra launch plan'
-========================================
-
-🧠 Graphiti (Temporal Facts):
-  [2026-02-01] Decided to target March 15th launch date
-  [2026-02-02] Changed from Postgres to SQLite for MVP
-
-📄 QMD (Document Search):
-  [0.89] memory/projects/spectra-launch.md
-  [0.76] memory/logs/2026-02-01.md
-
-========================================
-```
+1. Agents write to their **own group only**
+2. Agents read **cross-group** (omit `group_id` for global search)
+3. Only the orchestrator writes to `user-chris` and `system-shared`
+4. Shared files in `_shared/` are **read-only** for agents — report updates to orchestrator
 
 ---
 
-## Architecture
+## Docker Compose
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      OpenClaw Agent                         │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│         ┌─────────────────────────────────────┐            │
-│         │   memory-hybrid-search.sh          │            │
-│         │   (Unified Interface)              │            │
-│         └──────────────┬──────────────────────┘            │
-│                        │                                    │
-│           ┌────────────┴────────────┐                      │
-│           ▼                         ▼                      │
-│  ┌─────────────────┐    ┌─────────────────────┐           │
-│  │      QMD        │    │      Graphiti       │           │
-│  │  (Vector Store) │    │  (Knowledge Graph)  │           │
-│  ├─────────────────┤    ├─────────────────────┤           │
-│  │ • MEMORY.md     │    │ • Temporal facts    │           │
-│  │ • memory/*.md   │◄──►│ • Entity relations  │           │
-│  │ • Sessions      │sync│ • Bi-temporal data  │           │
-│  └─────────────────┘    └─────────────────────┘           │
-│        Auto-sync              Auto-sync                    │
-│        (5 min)                (10/30 min)                  │
-│                                                             │
-│  "What's in GOALS.md?"    "When did we decide that?"       │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
+The included `docker-compose.yml` runs:
+
+- **Graphiti API** (port 8001) — REST API for the knowledge graph
+- **Neo4j** (ports 7474/7687) — Graph database backend
+
+Environment variables:
+- `OPENAI_API_KEY` — Required for embeddings
+- `MODEL_NAME` — LLM for entity extraction (default: `gpt-4.1-mini`, recommend `gpt-4.1`)
 
 ---
 
-## File Structure
+## Cost
 
-```
-~/clawd/
-├── MEMORY.md                    # Curated long-term memory
-├── memory/
-│   ├── logs/                    # Daily logs (YYYY-MM-DD.md)
-│   ├── projects/                # Project documentation
-│   └── system/                  # System configuration
-├── scripts/
-│   ├── memory-hybrid-search.sh  # ⭐ Unified search (NEW)
-│   ├── graphiti-search.sh       # Temporal search
-│   ├── graphiti-log.sh          # Manual fact logging
-│   ├── graphiti-sync-sessions.py
-│   ├── graphiti-watch-files.py
-│   └── graphiti-import-files.py
-└── services/
-    └── graphiti/
-        └── docker-compose.yml
-
-~/Library/LaunchAgents/
-├── com.openclaw.graphiti-sync.plist
-└── com.openclaw.graphiti-file-sync.plist
-```
+- **QMD:** Free (local, uses Gemini embeddings which are free tier)
+- **Graphiti:** OpenAI API costs for entity extraction during ingestion only
+  - `gpt-4.1`: ~$2/M input, $8/M output tokens
+  - Searches are free (local Neo4j queries)
+  - Typical cost: < $1/month for a 20-agent setup
 
 ---
-
-## Skill Integration
-
-Add this to your agent's `AGENTS.md` or as a standalone skill:
-
-```markdown
-## Memory Recall (Hybrid System)
-
-We use **two memory systems** integrated into a single view:
-
-### Primary Tool (95% of queries)
-```bash
-~/clawd/scripts/memory-hybrid-search.sh "your query"
-```
-
-### Graphiti Only (Temporal/Facts)
-```bash
-~/clawd/scripts/graphiti-search.sh "when did X happen?" my-agent 10
-```
-
-### QMD Only (Deep Document Search)
-```bash
-qmd search "query" -n 10
-```
-
-### Logging Facts
-```bash
-~/clawd/scripts/graphiti-log.sh my-agent user "Name" "Important fact"
-```
-```
-
----
-
-## When to Search Memory
-
-Add this guidance to your agent's operating rules file (e.g., `AGENTS.md` in your workspace):
-
-```markdown
-### Memory Search
-
-**Default to searching memory.** The search is cheap. Missing context is expensive.
-
-| | Examples |
-|--|----------|
-| **Always search** | Your context — your work, projects, history, preferences |
-| **Default search** | Most questions — even general knowledge might have relevant past discussions |
-| **Skip** | Only trivial/conversational ("thanks", "good morning") |
-
-When in doubt, search first.
-```
-
-This guidance should go in whatever file your OpenClaw agent reads at session start for behavioral rules. The goal is to make memory search a **default habit**, not a special case.
-
----
-
-## Troubleshooting
-
-### QMD issues
-```bash
-qmd status                    # Check if running
-qmd update                    # Force re-index
-```
-
-### Graphiti issues
-```bash
-docker logs graphiti          # Check API logs
-docker logs neo4j             # Check database logs
-curl http://localhost:8001/healthcheck
-```
-
-### Sync daemons
-```bash
-launchctl list | grep graphiti
-tail -f ~/.openclaw/logs/graphiti-sync.log
-```
-
-### Reset everything
-```bash
-# QMD
-qmd reset
-
-# Graphiti
-cd ~/services/graphiti && docker compose down -v
-rm ~/.openclaw/graphiti-sync-state.json
-rm ~/.openclaw/graphiti-file-hashes.json
-docker compose up -d
-python3 ~/clawd/scripts/graphiti-import-files.py
-```
-
----
-
-## Credits
-
-- [QMD](https://github.com/tobi/qmd) — Quick Memory Daemon
-- [Graphiti](https://github.com/getzep/graphiti) — Temporal knowledge graph by Zep
-- [OpenClaw](https://openclaw.ai) — AI assistant platform
-- [Neo4j](https://neo4j.com) — Graph database
 
 ## License
 
-MIT — See [LICENSE](LICENSE)
-
----
-
-Built by [Clawd Brunner](https://github.com/clawdbrunner) 🦞
+MIT
