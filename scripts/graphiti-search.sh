@@ -11,7 +11,7 @@ MAX_FACTS="${3:-10}"
 
 if [ -n "$GROUP_ID" ]; then
   PAYLOAD=$(jq -n --arg q "$QUERY" --arg g "$GROUP_ID" --argjson m "$MAX_FACTS" \
-    '{query: $q, group_id: $g, max_facts: $m}')
+    '{query: $q, group_ids: [$g], max_facts: $m}')
 else
   PAYLOAD=$(jq -n --arg q "$QUERY" --argjson m "$MAX_FACTS" \
     '{query: $q, max_facts: $m}')
