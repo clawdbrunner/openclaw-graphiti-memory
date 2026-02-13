@@ -60,7 +60,7 @@ check_qmd() {
 # Check Graphiti API
 check_graphiti() {
     HEALTH=$(curl -s "$GRAPHITI_URL/healthcheck" 2>/dev/null)
-    if [ "$HEALTH" = '{"status":"ok"}' ]; then
+    if [ "$HEALTH" = '{"status":"ok"}' ] || [ "$HEALTH" = '{"status":"healthy"}' ]; then
         GRAPHITI_OK=true
         GRAPHITI_API_MSG="${GREEN}✓${NC} Graphiti API healthy"
     else
