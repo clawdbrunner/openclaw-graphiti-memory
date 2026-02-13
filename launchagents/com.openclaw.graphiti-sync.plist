@@ -8,7 +8,7 @@
     <array>
         <string>/usr/bin/python3</string>
         <!-- UPDATE THIS PATH to match your setup -->
-        <string>/Users/YOUR_USERNAME/clawd/scripts/graphiti-sync-sessions.py</string>
+        <string>/Users/YOUR_USERNAME/.openclaw/scripts/graphiti-sync-sessions.py</string>
     </array>
     <key>StartInterval</key>
     <!-- Runs every 30 minutes (1800 seconds) -->
@@ -17,9 +17,9 @@
     <true/>
     <key>StandardOutPath</key>
     <!-- UPDATE THIS PATH -->
-    <string>/Users/YOUR_USERNAME/.clawdbot/logs/graphiti-sync.log</string>
+    <string>/Users/YOUR_USERNAME/.openclaw/logs/graphiti-sync.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/YOUR_USERNAME/.clawdbot/logs/graphiti-sync.log</string>
+    <string>/Users/YOUR_USERNAME/.openclaw/logs/graphiti-sync.log</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>

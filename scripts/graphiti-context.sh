@@ -40,7 +40,7 @@ curl -s -X POST "${GRAPHITI_URL}/search" \
 if [ -n "$AGENT_ID" ]; then
   echo ""
   echo "--- My Memory (${AGENT_ID}) ---"
-  PAYLOAD=$(jq -n --arg q "$TASK" --arg g "clawdbot-${AGENT_ID}" '{query: $q, group_id: $g, max_facts: 5}')
+  PAYLOAD=$(jq -n --arg q "$TASK" --arg g "openclaw-${AGENT_ID}" '{query: $q, group_id: $g, max_facts: 5}')
   curl -s -X POST "${GRAPHITI_URL}/search" \
     -H 'Content-Type: application/json' \
     -d "$PAYLOAD" | jq -r '.facts[]? | "• \(.fact)"' 2>/dev/null

@@ -2,7 +2,7 @@
 """Patch all agent AGENTS.md files with shared memory section."""
 import os, re
 
-AGENTS_DIR = os.path.expanduser("~/clawd/agents")
+AGENTS_DIR = os.path.expanduser("~/.openclaw/agents")
 
 AGENTS = {
     "hazel": ("Hazel", "Household changes, service provider updates, maintenance findings."),
@@ -32,19 +32,19 @@ You have access to a **shared knowledge graph** that all agents contribute to. U
 
 **Before starting any task**, search for relevant context:
 ```bash
-~/clawd/agents/_shared/bin/graphiti-search.sh "your query"
-~/clawd/agents/_shared/bin/graphiti-context.sh "task description" {agent_id}
+~/.openclaw/scripts/graphiti-search.sh "your query"
+~/.openclaw/scripts/graphiti-context.sh "task description" {agent_id}
 ```
 
 **Log significant discoveries** (to your own group only):
 ```bash
-~/clawd/agents/_shared/bin/graphiti-log.sh {agent_id} assistant "{name}" "Important fact here"
+~/.openclaw/scripts/graphiti-log.sh {agent_id} assistant "{name}" "Important fact here"
 ```
 
 **What to log:** {hint}
 **What NOT to log:** Routine status, temporary task state, raw data dumps.
 **Rules:** Never write to another agent's group or to user-main/system-shared. Report updates to the orchestrator.
-Full docs: ~/clawd/agents/_shared/graphiti-memory.md
+Full docs: ~/.openclaw/shared/graphiti-memory.md
 
 ---
 

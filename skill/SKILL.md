@@ -15,11 +15,11 @@ We use two memory systems integrated into a single view:
 For 95% of memory queries, use the hybrid search script. It queries both systems in parallel.
 
 ```bash
-~/clawd/scripts/memory-hybrid-search.sh "your query"
+~/.openclaw/scripts/memory-hybrid-search.sh "your query"
 ```
 
 Optional flags:
-- `[group_id]` — Specify agent group (default: `clawdbot-main`)
+- `[group_id]` — Specify agent group (default: `openclaw-main`)
 - `--json` — Output JSON for programmatic use
 
 ## Specific Tools (Advanced)
@@ -31,13 +31,13 @@ Only use these if the hybrid script fails or you need granular control.
 Search for specific temporal facts:
 
 ```bash
-~/clawd/scripts/graphiti-search.sh "your question" clawdbot-main 10
+~/.openclaw/scripts/graphiti-search.sh "your question" openclaw-main 10
 ```
 
 Log new facts (IMPORTANT):
 
 ```bash
-~/clawd/scripts/graphiti-log.sh clawdbot-main user "Name" "Fact to remember"
+~/.openclaw/scripts/graphiti-log.sh openclaw-main user "Name" "Fact to remember"
 ```
 
 ### QMD Only (Deep Document Search)
@@ -51,7 +51,7 @@ qmd search "query" -n 10
 ## Recall Pattern
 
 1. **User asks question** ("What was the plan for the project?")
-2. **Run Hybrid Search** (`~/clawd/scripts/memory-hybrid-search.sh "plan for the project"`)
+2. **Run Hybrid Search** (`~/.openclaw/scripts/memory-hybrid-search.sh "plan for the project"`)
 3. **Synthesize Answer** from both the temporal facts and document snippets found.
 4. **If needed:** Use `read` to get the full content of a file found in the QMD results.
 

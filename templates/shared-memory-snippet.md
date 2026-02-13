@@ -25,13 +25,13 @@ All agents contribute to a shared temporal knowledge graph.
 
 **Before starting any task**, search for relevant context:
 ```bash
-~/clawd/agents/_shared/bin/graphiti-search.sh "your query"
-~/clawd/agents/_shared/bin/graphiti-context.sh "task description" <agent_id>
+~/.openclaw/scripts/graphiti-search.sh "your query"
+~/.openclaw/scripts/graphiti-context.sh "task description" <agent_id>
 ```
 
 **Log significant discoveries** (to your own group only):
 ```bash
-~/clawd/agents/_shared/bin/graphiti-log.sh <agent_id> assistant "<AgentName>" "Important fact here"
+~/.openclaw/scripts/graphiti-log.sh <agent_id> assistant "<AgentName>" "Important fact here"
 ```
 
 **What to log:** [Customize per agent — e.g., "New contacts, email patterns, financial decisions"]

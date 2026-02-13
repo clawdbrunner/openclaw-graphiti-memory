@@ -7,10 +7,10 @@
 sessions_send sessionKey="agent:<name>:main" message="your message"
 
 # Mirror to Slack for visibility
-~/clawd/agents/_shared/bin/agent-msg.sh <your_id> <target_id> "your message"
+~/.openclaw/scripts/agent-msg.sh <your_id> <target_id> "your message"
 ```
 
-Full protocol: `~/clawd/agents/_shared/agent-comms.md`
+Full protocol: `~/.openclaw/shared/agent-comms.md`
 
 ## Active Agents
 

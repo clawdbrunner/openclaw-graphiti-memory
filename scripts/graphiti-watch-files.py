@@ -15,16 +15,16 @@ from pathlib import Path
 import urllib.request
 
 GRAPHITI_URL = os.environ.get("GRAPHITI_URL", "http://localhost:8001")
-MEMORY_DIR = Path.home() / "clawd/memory"
-CLAWD_DIR = Path.home() / "clawd"
-STATE_DIR = Path.home() / ".clawdbot"
+OPENCLAW_DIR = Path.home() / ".openclaw"
+MEMORY_DIR = OPENCLAW_DIR / "workspace/memory"
+STATE_DIR = OPENCLAW_DIR
 STATE_FILE = STATE_DIR / "graphiti-file-hashes.json"
 CONTENT_CACHE_DIR = STATE_DIR / "file-cache"
 
 WATCHED_FILES = [
-    CLAWD_DIR / "MEMORY.md",
-    CLAWD_DIR / "IDENTITY.md", 
-    CLAWD_DIR / "USER.md",
+    OPENCLAW_DIR / "workspace/MEMORY.md",
+    OPENCLAW_DIR / "workspace/IDENTITY.md",
+    OPENCLAW_DIR / "workspace/USER.md",
 ]
 
 # Files to skip for content caching (too large or sensitive)
@@ -157,7 +157,7 @@ def send_summary_to_graphiti(summary, timestamp, source, filepath):
     
     # Build payload with summary as primary content
     payload = {
-        "group_id": "clawdbot-main",
+        "group_id": "openclaw-main",
         "messages": [{
             "role_type": "system",
             "role": "FileUpdate",

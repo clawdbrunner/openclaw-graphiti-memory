@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Sync Clawdbot session messages to Graphiti knowledge graph.
+Sync OpenClaw session messages to Graphiti knowledge graph.
 Runs periodically to keep Graphiti updated with conversation history.
 """
 
@@ -14,8 +14,9 @@ import urllib.request
 import urllib.error
 
 GRAPHITI_URL = os.environ.get("GRAPHITI_URL", "http://localhost:8001")
-SESSIONS_DIR = Path.home() / ".clawdbot/agents/main/sessions"
-SYNC_STATE_FILE = Path.home() / ".clawdbot/graphiti-sync-state.json"
+OPENCLAW_DIR = Path.home() / ".openclaw"
+SESSIONS_DIR = OPENCLAW_DIR / "agents/main/sessions"
+SYNC_STATE_FILE = OPENCLAW_DIR / "graphiti-sync-state.json"
 MAX_MESSAGES_PER_RUN = 50
 
 def load_sync_state():
@@ -155,7 +156,7 @@ def sync_sessions():
                     speaker = 'User' if role == 'user' else 'Agent'
                     
                     # Send to Graphiti
-                    if send_to_graphiti('clawdbot-main', role_type, speaker, content, timestamp):
+                    if send_to_graphiti('openclaw-main', role_type, speaker, content, timestamp):
                         state['synced_messages'][msg_id] = datetime.now().isoformat()
                         synced_count += 1
                         time.sleep(0.3)  # Rate limit
