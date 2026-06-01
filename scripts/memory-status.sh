@@ -22,8 +22,8 @@ fi
 
 QMD_PATH="${QMD_PATH:-$HOME/.bun/bin/qmd}"
 GRAPHITI_URL="${GRAPHITI_URL:-http://localhost:8001}"
-MEMORY_DIR="${MEMORY_DIR:-$HOME/clawd/memory}"
-CLAWD_DIR="${CLAWD_DIR:-$HOME/clawd}"
+OPENCLAW_DIR="${OPENCLAW_DIR:-$HOME/.openclaw}"
+MEMORY_DIR="${MEMORY_DIR:-$OPENCLAW_DIR/workspace/memory}"
 
 # Status variables
 QMD_OK=false
@@ -60,7 +60,7 @@ check_qmd() {
 # Check Graphiti API
 check_graphiti() {
     HEALTH=$(curl -s "$GRAPHITI_URL/healthcheck" 2>/dev/null)
-    if [ "$HEALTH" = '{"status":"ok"}' ]; then
+    if [ "$HEALTH" = '{"status":"ok"}' ] || [ "$HEALTH" = '{"status":"healthy"}' ]; then
         GRAPHITI_OK=true
         GRAPHITI_API_MSG="${GREEN}✓${NC} Graphiti API healthy"
     else
@@ -85,14 +85,14 @@ check_docker() {
 
 # Check sync daemons
 check_daemons() {
-    if launchctl list 2>/dev/null | grep -q "com.clawd.graphiti-file-sync"; then
+    if launchctl list 2>/dev/null | grep -q "com.openclaw.graphiti-file-sync"; then
         FILE_SYNC_OK=true
         FILE_SYNC_DAEMON_MSG="${GREEN}✓${NC} File sync daemon running"
     else
         FILE_SYNC_DAEMON_MSG="${RED}✗${NC} File sync daemon not loaded"
     fi
     
-    if launchctl list 2>/dev/null | grep -q "com.clawd.graphiti-sync"; then
+    if launchctl list 2>/dev/null | grep -q "com.openclaw.graphiti-sync"; then
         SESSION_SYNC_OK=true
         SESSION_SYNC_DAEMON_MSG="${GREEN}✓${NC} Session sync daemon running"
     else
@@ -102,7 +102,7 @@ check_daemons() {
 
 # Check last sync times
 check_sync_times() {
-    LOG_DIR="$HOME/.clawdbot/logs"
+    LOG_DIR="$OPENCLAW_DIR/logs"
     
     if [ -f "$LOG_DIR/graphiti-file-sync.log" ]; then
         FILE_SYNC_LAST=$(stat -f %Sm "$LOG_DIR/graphiti-file-sync.log" 2>/dev/null | sed 's/ / T/')

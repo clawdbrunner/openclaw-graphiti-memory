@@ -15,7 +15,7 @@ A complete three-layer memory system for [OpenClaw](https://openclaw.ai) multi-a
 │  └──────────┘ └──────────┘ └──────────┘            │
 │  Per-agent vector search via memory_search           │
 │                                                      │
-│  Layer 2: Shared Files (_shared/)                    │
+│  Layer 2: Shared Files (shared/)                     │
 │  ┌──────────────────────────────────┐               │
 │  │ user-profile.md                  │               │
 │  │ agent-roster.md                  │               │
@@ -27,8 +27,8 @@ A complete three-layer memory system for [OpenClaw](https://openclaw.ai) multi-a
 │                                                      │
 │  Layer 3: Shared Knowledge Graph (Graphiti)          │
 │  ┌──────────────────────────────────┐               │
-│  │ clawdbot-clawd  (write own)     │               │
-│  │ clawdbot-piper  (write own)     │               │
+│  │ openclaw-clawd  (write own)     │               │
+│  │ openclaw-piper  (write own)     │               │
 │  │ user-main      (orchestrator)  │               │
 │  │ system-shared   (orchestrator)  │               │
 │  └──────────────────────────────────┘               │
@@ -41,7 +41,7 @@ A complete three-layer memory system for [OpenClaw](https://openclaw.ai) multi-a
 | Layer | What | Best For | Mutability |
 |-------|------|----------|------------|
 | **Private Files** | Agent's own `memory/` dir | Private notes, task logs, local state | Agent writes freely |
-| **Shared Files** | `_shared/` dir (symlinked) | Stable reference docs (profiles, roster) | Orchestrator maintains |
+| **Shared Files** | `shared/` dir (symlinked) | Stable reference docs (profiles, roster) | Orchestrator maintains |
 | **Shared Graph** | Graphiti knowledge graph | Temporal facts, cross-agent knowledge | Agents write to own group |
 
 ### When to use which
@@ -65,17 +65,18 @@ A complete three-layer memory system for [OpenClaw](https://openclaw.ai) multi-a
 ### 1. Install Graphiti Stack
 
 ```bash
-git clone https://github.com/your-username/openclaw-graphiti-memory.git
+git clone https://github.com/clawdbrunner/openclaw-graphiti-memory.git
 cd openclaw-graphiti-memory
 
 # Copy docker-compose to your services directory
-cp docker-compose.yml ~/clawd/services/graphiti/
+mkdir -p ~/.openclaw/services/graphiti
+cp docker-compose.yml ~/.openclaw/services/graphiti/
 
 # Set your OpenAI key
 export OPENAI_API_KEY="sk-..."
 
 # Start the stack
-cd ~/clawd/services/graphiti
+cd ~/.openclaw/services/graphiti
 docker compose up -d
 ```
 
@@ -101,23 +102,20 @@ Add to `~/.openclaw/openclaw.json` under `agents.defaults`:
 ### 3. Set Up Shared Directory
 
 ```bash
-# Create the shared directory
-mkdir -p ~/clawd/agents/_shared/bin
-
-# Copy shared scripts
-cp scripts/graphiti-search.sh ~/clawd/agents/_shared/bin/
-cp scripts/graphiti-log.sh ~/clawd/agents/_shared/bin/
-cp scripts/graphiti-context.sh ~/clawd/agents/_shared/bin/
-chmod +x ~/clawd/agents/_shared/bin/*.sh
+# Copy scripts to OpenClaw scripts directory
+mkdir -p ~/.openclaw/scripts
+cp scripts/*.sh scripts/*.py ~/.openclaw/scripts/
+chmod +x ~/.openclaw/scripts/*.sh
 
 # Copy shared reference files
-cp shared-files/*.md ~/clawd/agents/_shared/
+mkdir -p ~/.openclaw/shared
+cp shared-files/*.md ~/.openclaw/shared/
 
 # Symlink into each agent's workspace
-for agent_dir in ~/clawd/agents/*/; do
+for agent_dir in ~/.openclaw/agents/*/; do
   agent=$(basename "$agent_dir")
   [[ "$agent" == "_shared" || "$agent" == "_template" ]] && continue
-  ln -sf ~/clawd/agents/_shared "$agent_dir/shared"
+  ln -sf ~/.openclaw/shared "$agent_dir/shared"
 done
 ```
 
@@ -143,7 +141,7 @@ scripts/graphiti-log.sh system-shared system "System" "Agent team: Clawd (orches
 
 ## Scripts
 
-### For Agents (`_shared/bin/`)
+### For Agents (`scripts/`)
 
 | Script | Purpose |
 |--------|---------|
@@ -167,7 +165,7 @@ scripts/graphiti-log.sh system-shared system "System" "Agent team: Clawd (orches
 
 | Group | Owner | Purpose |
 |-------|-------|---------|
-| `clawdbot-<agent_id>` | Each agent | Agent's own discoveries and decisions |
+| `openclaw-<agent_id>` | Each agent | Agent's own discoveries and decisions |
 | `user-main` | Orchestrator | User profile, preferences, contacts |
 | `system-shared` | Orchestrator | Agent roster, infrastructure, active projects |
 
@@ -176,7 +174,7 @@ scripts/graphiti-log.sh system-shared system "System" "Agent team: Clawd (orches
 1. Agents write to their **own group only**
 2. Agents read **cross-group** (omit `group_id` for global search)
 3. Only the orchestrator writes to `user-main` and `system-shared`
-4. Shared files in `_shared/` are **read-only** for agents — report updates to orchestrator
+4. Shared files in `shared/` are **read-only** for agents — report updates to orchestrator
 
 ---
 

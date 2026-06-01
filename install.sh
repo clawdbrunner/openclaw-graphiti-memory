@@ -19,10 +19,9 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # Configuration
-REPO_URL="https://raw.githubusercontent.com/your-username/openclaw-graphiti-memory/main"
-CLAWD_DIR="${CLAWD_DIR:-$HOME/clawd}"
-SERVICES_DIR="$HOME/services"
-SCRIPT_DIR="$CLAWD_DIR/scripts"
+REPO_URL="https://raw.githubusercontent.com/clawdbrunner/openclaw-graphiti-memory/main"
+OPENCLAW_DIR="${OPENCLAW_DIR:-$HOME/.openclaw}"
+SCRIPT_DIR="$OPENCLAW_DIR/scripts"
 LAUNCHAGENTS_DIR="$HOME/Library/LaunchAgents"
 
 # Detect OS
@@ -37,7 +36,7 @@ echo "🦞 Hybrid Memory System Installer"
 echo "=================================="
 echo ""
 echo "OS detected: $OS"
-echo "Install path: $CLAWD_DIR"
+echo "Install path: $OPENCLAW_DIR"
 echo ""
 
 # Track what we did
@@ -117,12 +116,12 @@ check_prerequisites() {
 create_directories() {
     echo "📁 Creating directory structure..."
     
-    run_cmd mkdir -p "$CLAWD_DIR/memory/logs"
-    run_cmd mkdir -p "$CLAWD_DIR/memory/projects"
-    run_cmd mkdir -p "$CLAWD_DIR/memory/system"
+    run_cmd mkdir -p "$OPENCLAW_DIR/workspace/memory/logs"
+    run_cmd mkdir -p "$OPENCLAW_DIR/workspace/memory/projects"
+    run_cmd mkdir -p "$OPENCLAW_DIR/workspace/memory/system"
     run_cmd mkdir -p "$SCRIPT_DIR"
-    run_cmd mkdir -p "$SERVICES_DIR/graphiti"
-    run_cmd mkdir -p "$HOME/.clawdbot/logs"
+    run_cmd mkdir -p "$OPENCLAW_DIR/services/graphiti"
+    run_cmd mkdir -p "$OPENCLAW_DIR/logs"
     
     if [ "$OS" = "macos" ]; then
         run_cmd mkdir -p "$LAUNCHAGENTS_DIR"
@@ -171,7 +170,7 @@ deploy_graphiti() {
     echo "🐳 Deploying Graphiti..."
     
     local compose_url="$REPO_URL/docker-compose.yml"
-    local compose_dest="$SERVICES_DIR/graphiti/docker-compose.yml"
+    local compose_dest="$OPENCLAW_DIR/services/graphiti/docker-compose.yml"
     
     if [ "$DRY_RUN" = true ]; then
         echo "  [DRY-RUN] Download docker-compose.yml → $compose_dest"
@@ -184,13 +183,13 @@ deploy_graphiti() {
             if docker ps | grep -q "graphiti"; then
                 log_warn "Graphiti appears to already be running"
             else
-                cd "$SERVICES_DIR/graphiti"
+                cd "$OPENCLAW_DIR/services/graphiti"
                 if [ -n "$OPENAI_API_KEY" ]; then
                     docker compose up -d
                     log_step "Graphiti containers started"
                 else
                     log_warn "OPENAI_API_KEY not set. Set it and run:"
-                    log_warn "  cd $SERVICES_DIR/graphiti && docker compose up -d"
+                    log_warn "  cd $OPENCLAW_DIR/services/graphiti && docker compose up -d"
                 fi
             fi
         else
@@ -212,13 +211,13 @@ configure_launchd() {
     echo "⚙️  Configuring LaunchAgents..."
     
     # File sync agent
-    cat > /tmp/com.clawd.graphiti-file-sync.plist <<EOF
+    cat > /tmp/com.openclaw.graphiti-file-sync.plist <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.clawd.graphiti-file-sync</string>
+    <string>com.openclaw.graphiti-file-sync</string>
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/python3</string>
@@ -227,21 +226,21 @@ configure_launchd() {
     <key>StartInterval</key>
     <integer>600</integer>
     <key>StandardOutPath</key>
-    <string>$HOME/.clawdbot/logs/graphiti-file-sync.log</string>
+    <string>$HOME/.openclaw/logs/graphiti-file-sync.log</string>
     <key>StandardErrorPath</key>
-    <string>$HOME/.clawdbot/logs/graphiti-file-sync.log</string>
+    <string>$HOME/.openclaw/logs/graphiti-file-sync.log</string>
 </dict>
 </plist>
 EOF
     
     # Session sync agent
-    cat > /tmp/com.clawd.graphiti-sync.plist <<EOF
+    cat > /tmp/com.openclaw.graphiti-sync.plist <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.clawd.graphiti-sync</string>
+    <string>com.openclaw.graphiti-sync</string>
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/python3</string>
@@ -250,9 +249,9 @@ EOF
     <key>StartInterval</key>
     <integer>1800</integer>
     <key>StandardOutPath</key>
-    <string>$HOME/.clawdbot/logs/graphiti-sync.log</string>
+    <string>$HOME/.openclaw/logs/graphiti-sync.log</string>
     <key>StandardErrorPath</key>
-    <string>$HOME/.clawdbot/logs/graphiti-sync.log</string>
+    <string>$HOME/.openclaw/logs/graphiti-sync.log</string>
 </dict>
 </plist>
 EOF
@@ -261,16 +260,16 @@ EOF
         echo "  [DRY-RUN] Copy LaunchAgents to $LAUNCHAGENTS_DIR"
         echo "  [DRY-RUN] launchctl load agents"
     else
-        cp /tmp/com.clawd.graphiti-file-sync.plist "$LAUNCHAGENTS_DIR/"
-        cp /tmp/com.clawd.graphiti-sync.plist "$LAUNCHAGENTS_DIR/"
-        
+        cp /tmp/com.openclaw.graphiti-file-sync.plist "$LAUNCHAGENTS_DIR/"
+        cp /tmp/com.openclaw.graphiti-sync.plist "$LAUNCHAGENTS_DIR/"
+
         # Unload if already loaded
-        launchctl unload "$LAUNCHAGENTS_DIR/com.clawd.graphiti-file-sync.plist" 2>/dev/null || true
-        launchctl unload "$LAUNCHAGENTS_DIR/com.clawd.graphiti-sync.plist" 2>/dev/null || true
-        
+        launchctl unload "$LAUNCHAGENTS_DIR/com.openclaw.graphiti-file-sync.plist" 2>/dev/null || true
+        launchctl unload "$LAUNCHAGENTS_DIR/com.openclaw.graphiti-sync.plist" 2>/dev/null || true
+
         # Load agents
-        launchctl load "$LAUNCHAGENTS_DIR/com.clawd.graphiti-file-sync.plist" 2>/dev/null || true
-        launchctl load "$LAUNCHAGENTS_DIR/com.clawd.graphiti-sync.plist" 2>/dev/null || true
+        launchctl load "$LAUNCHAGENTS_DIR/com.openclaw.graphiti-file-sync.plist" 2>/dev/null || true
+        launchctl load "$LAUNCHAGENTS_DIR/com.openclaw.graphiti-sync.plist" 2>/dev/null || true
         
         log_step "LaunchAgents configured and loaded"
     fi
@@ -280,7 +279,7 @@ EOF
 
 # Step 6: Create sample MEMORY.md
 create_sample_memory() {
-    if [ -f "$CLAWD_DIR/MEMORY.md" ]; then
+    if [ -f "$OPENCLAW_DIR/workspace/MEMORY.md" ]; then
         log_info "MEMORY.md already exists, skipping"
         return
     fi
@@ -306,8 +305,8 @@ Information about the person you're helping.
 
 We use QMD (vector search) + Graphiti (temporal facts).
 
-- Search: `~/clawd/scripts/memory-hybrid-search.sh "query"`
-- Status: `~/clawd/scripts/memory-status.sh`
+- Search: `~/.openclaw/scripts/memory-hybrid-search.sh "query"`
+- Status: `~/.openclaw/scripts/memory-status.sh`
 
 ## Important Context
 
@@ -315,9 +314,9 @@ Add your ongoing projects, preferences, and important facts here.
 EOF
     
     if [ "$DRY_RUN" = true ]; then
-        echo "  [DRY-RUN] Create $CLAWD_DIR/MEMORY.md"
+        echo "  [DRY-RUN] Create $OPENCLAW_DIR/workspace/MEMORY.md"
     else
-        cp /tmp/MEMORY.md.sample "$CLAWD_DIR/MEMORY.md"
+        cp /tmp/MEMORY.md.sample "$OPENCLAW_DIR/workspace/MEMORY.md"
         log_step "Sample MEMORY.md created"
     fi
     
@@ -380,18 +379,18 @@ print_summary() {
     echo "=================================="
     echo ""
     echo "Quick commands:"
-    echo "  ~/clawd/scripts/memory-hybrid-search.sh \"your query\""
-    echo "  ~/clawd/scripts/memory-status.sh"
-    echo "  ~/clawd/scripts/graphiti-log.sh clawdbot-main user \"Name\" \"Fact\""
+    echo "  ~/.openclaw/scripts/memory-hybrid-search.sh \"your query\""
+    echo "  ~/.openclaw/scripts/memory-status.sh"
+    echo "  ~/.openclaw/scripts/graphiti-log.sh openclaw-main user \"Name\" \"Fact\""
     echo ""
     echo "Services:"
     echo "  Graphiti API: http://localhost:8001"
     echo "  Neo4j Browser: http://localhost:7474"
     echo ""
     echo "Useful paths:"
-    echo "  Memory files: $CLAWD_DIR/memory/"
+    echo "  Memory files: $OPENCLAW_DIR/workspace/memory/"
     echo "  Scripts: $SCRIPT_DIR/"
-    echo "  Graphiti: $SERVICES_DIR/graphiti/"
+    echo "  Graphiti: $OPENCLAW_DIR/services/graphiti/"
     echo ""
     
     if [ ${#INSTALL_LOG[@]} -gt 0 ]; then

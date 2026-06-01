@@ -14,8 +14,8 @@ from pathlib import Path
 import urllib.request
 
 GRAPHITI_URL = os.environ.get("GRAPHITI_URL", "http://localhost:8001")
-MEMORY_DIR = Path.home() / "clawd/memory"
-CLAWD_DIR = Path.home() / "clawd"
+OPENCLAW_DIR = Path.home() / ".openclaw"
+MEMORY_DIR = OPENCLAW_DIR / "workspace/memory"
 
 def send_to_graphiti(group_id, role_type, role, content, timestamp, source_desc=""):
     """Send content to Graphiti."""
@@ -124,7 +124,7 @@ def import_daily_logs():
         
         for section in sections:
             if send_to_graphiti(
-                "clawdbot-main",
+                "openclaw-main",
                 "system",
                 "DailyLog",
                 section["content"],
@@ -151,7 +151,7 @@ def import_project_docs():
         doc = parse_project_doc(docfile)
         
         if send_to_graphiti(
-            "clawdbot-main",
+            "openclaw-main",
             "system",
             "ProjectDoc",
             doc["content"],
@@ -169,9 +169,9 @@ def import_project_docs():
 def import_identity_files():
     """Import core identity files."""
     files = [
-        (CLAWD_DIR / "MEMORY.md", "LongTermMemory"),
-        (CLAWD_DIR / "IDENTITY.md", "Identity"),
-        (CLAWD_DIR / "USER.md", "UserProfile"),
+        (OPENCLAW_DIR / "workspace/MEMORY.md", "LongTermMemory"),
+        (OPENCLAW_DIR / "workspace/IDENTITY.md", "Identity"),
+        (OPENCLAW_DIR / "workspace/USER.md", "UserProfile"),
     ]
     
     count = 0
@@ -185,7 +185,7 @@ def import_identity_files():
         timestamp = mtime.strftime("%Y-%m-%dT%H:%M:%SZ")
         
         if send_to_graphiti(
-            "clawdbot-main",
+            "openclaw-main",
             "system",
             role,
             f"Core file {filepath.name}:\n{content[:3000]}",

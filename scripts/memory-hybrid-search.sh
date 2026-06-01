@@ -4,7 +4,7 @@
 # Usage: memory-hybrid-search.sh <query> [group_id] [--json] [--no-cross-ref]
 
 QUERY="${1}"
-GROUP_ID="${2:-clawdbot-main}"
+GROUP_ID="${2:-openclaw-main}"
 JSON_MODE=false
 NO_CROSS_REF=false
 QMD_PATH="${QMD_PATH:-$HOME/.bun/bin/qmd}"
@@ -38,7 +38,7 @@ get_related_facts() {
 }
 
 # Run searches in parallel and capture output
-GRAPHITI_OUT=$(~/clawd/scripts/graphiti-search.sh "$QUERY" "$GROUP_ID" 5 2>/dev/null)
+GRAPHITI_OUT=$(~/.openclaw/scripts/graphiti-search.sh "$QUERY" "$GROUP_ID" 5 2>/dev/null)
 GRAPHITI_STATUS=$?
 
 if [ -x "$QMD_PATH" ]; then

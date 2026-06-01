@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Shared Graphiti logger for all agents
 # Usage: graphiti-log.sh <agent_id> <role_type> <role> <content> [timestamp]
-# Agents should ONLY log to their own group: clawdbot-<agent_id>
+# Agents should ONLY log to their own group: openclaw-<agent_id>
 set -euo pipefail
 
 GRAPHITI_URL="${GRAPHITI_URL:-http://localhost:8001}"
@@ -11,7 +11,7 @@ ROLE="${3:?Missing role (speaker name)}"
 CONTENT="${4:?Missing content}"
 TIMESTAMP="${5:-$(date -u +%Y-%m-%dT%H:%M:%S+00:00)}"
 
-GROUP_ID="clawdbot-${AGENT_ID}"
+GROUP_ID="openclaw-${AGENT_ID}"
 
 PAYLOAD=$(jq -n \
   --arg g "$GROUP_ID" \
