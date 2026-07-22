@@ -1,18 +1,18 @@
 ---
 name: hybrid-memory
-description: "Recalls past conversations, retrieves stored facts, and searches documents using OpenClaw QMD vector memory and Graphiti temporal knowledge graph. Use when the user asks to remember something, recall a previous discussion, look up what was said before, find prior context, check conversation history, or retrieve a stored fact or document."
+description: Hybrid memory strategy combining OpenClaw's built-in QMD vector memory with Graphiti temporal knowledge graph. Use for all memory recall requests.
 ---
 
 # Hybrid Memory System
 
-Combines two memory backends into a single recall layer:
+We use two memory systems integrated into a single view:
 
-1. **QMD (Vector Store):** Retrieves documents, specs, and full-text content by semantic similarity.
-2. **Graphiti (Knowledge Graph):** Retrieves temporal facts, entity relationships, and cross-agent knowledge.
+1. **QMD (Vector Store):** For retrieving documents, specs, and full content.
+2. **Graphiti (Knowledge Graph):** For retrieving facts, timelines, and relationships.
 
 ## Primary Tool
 
-For most memory queries, use the hybrid search script. It queries both systems in parallel and merges results.
+For 95% of memory queries, use the hybrid search script. It queries both systems in parallel.
 
 ```bash
 ~/.openclaw/scripts/memory-hybrid-search.sh "your query"
@@ -24,7 +24,7 @@ Optional flags:
 
 ## Specific Tools (Advanced)
 
-Use these when the hybrid script returns no results, or when you need granular control over a single backend.
+Only use these if the hybrid script fails or you need granular control.
 
 ### Graphiti Only (Temporal/Facts)
 
@@ -34,7 +34,7 @@ Search for specific temporal facts:
 ~/.openclaw/scripts/graphiti-search.sh "your question" openclaw-main 10
 ```
 
-Log new facts (IMPORTANT — do this after key conversations or decisions):
+Log new facts (IMPORTANT):
 
 ```bash
 ~/.openclaw/scripts/graphiti-log.sh openclaw-main user "Name" "Fact to remember"
@@ -54,19 +54,6 @@ qmd search "query" -n 10
 2. **Run Hybrid Search** (`~/.openclaw/scripts/memory-hybrid-search.sh "plan for the project"`)
 3. **Synthesize Answer** from both the temporal facts and document snippets found.
 4. **If needed:** Use `read` to get the full content of a file found in the QMD results.
-5. **If no results:** Retry with broader terms, try Graphiti direct (`graphiti-search.sh`), or widen QMD search (`qmd search "query" -n 20`).
-
-## Proactive Logging
-
-Keep the knowledge graph current by logging important facts after they occur:
-
-- After the user shares a preference, decision, or key fact
-- After completing a task with outcomes worth remembering
-- After learning new entity relationships (people, projects, systems)
-
-```bash
-~/clawd/scripts/graphiti-log.sh clawdbot-main user "UserName" "User decided to use PostgreSQL for the new service"
-```
 
 ## When to Use Which
 
@@ -76,4 +63,3 @@ Keep the knowledge graph current by logging important facts after they occur:
 | "When did we discuss X?" | Hybrid search (Graphiti results) |
 | "What did I say last Tuesday?" | Graphiti direct |
 | "Find notes about architecture" | Hybrid search (QMD results) |
-| "Remember that I prefer dark mode" | `graphiti-log.sh` to store the fact |
